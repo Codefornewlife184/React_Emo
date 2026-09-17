@@ -1,0 +1,196 @@
+# =========================================================
+# Emo Schildersbedrijf - Apache Yapılandırması (.htaccess)
+# Domain: http://emoschildersbedrijf.nl/
+# =========================================================
+
+# ---------------------------------------------------------
+# 1. TEMEL AYARLAR
+# ---------------------------------------------------------
+AddDefaultCharset UTF-8
+DefaultLanguage nl
+Options -Indexes -MultiViews
+DirectoryIndex index.html index.php
+
+# Sunucu sürümünü / PHP sürümünü gizle (güvenlik)
+ServerTokens Prod
+<IfModule mod_headers.c>
+  Header unset X-Powered-By
+</IfModule>
+<IfModule mod_php.c>
+  php_flag expose_php Off
+</IfModule>
+
+# ---------------------------------------------------------
+# 2. WWW -> NON-WWW YÖNLENDİRMESİ (emoschildersbedrijf.nl)
+#    Kullanıcı www. ile girerse www'siz adrese yönlenir
+# ---------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteCond %{HTTP_HOST} ^www\.emoschildersbedrijf\.nl [NC]
+  RewriteRule ^(.*)$ http://emoschildersbedrijf.nl/$1 [L,R=301]
+</IfModule>
+
+# ---------------------------------------------------------
+# 3. HTTP -> HTTPS ZORLAMA (SSL SERTİFİKASI KURULUNCA AÇIN)
+#    Aşağıdaki 4 satırın başındaki "#" işaretlerini silin
+# ---------------------------------------------------------
+# <IfModule mod_rewrite.c>
+#   RewriteCond %{HTTPS} !=on
+#   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# ---------------------------------------------------------
+# 4. REACT ROUTER SPA FALLBACK (ÖNEMLİ)
+#    Var olmayan /service/... gibi URL'ler index.html'e
+#    yönlenir (aksi halde 404 hatası alırsınız)
+#    /api/ altındaki PHP dosyaları hariç tutulur
+# ---------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Gerçek dosya / klasör ise atla
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # /api/ altındakiler hariç her şeyi index.html'e gönder
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ---------------------------------------------------------
+# 5. GÜVENLİK BAŞLIKLARI (HTTP Headers)
+# ---------------------------------------------------------
+<IfModule mod_headers.c>
+  # MIME türünü zorla (tarayıcının dosya türünü tahmin etmesini engelle)
+  Header set X-Content-Type-Options "nosniff"
+
+  # Siteyi başka sitenin iframe'ine koymayı engelle (clickjacking koruması)
+  Header set X-Frame-Options "SAMEORIGIN"
+
+  # XSS filtresi
+  Header set X-XSS-Protection "1; mode=block"
+
+  # Referrer politikası (kısmen gizle)
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Tarayıcı izinleri (kamera, mikrofon vb. istemeyiz)
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), autoplay=(), fullscreen=self"
+
+  # Strict-Transport-Security (SSL KURULUNCA AÇIN - # kaldır)
+  # Header set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+
+  # İçerik Güvenlik Politikası (ihtiyaca göre özelleştirin - şimdiki yorum)
+  # Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self'"
+</IfModule>
+
+# ---------------------------------------------------------
+# 6. GZIP / BROTLI SIKIŞTIRMA (Sayfa yüklemesini hızlandırır)
+# ---------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE application/xml
+  AddOutputFilterByType DEFLATE application/xhtml+xml
+  AddOutputFilterByType DEFLATE application/rss+xml
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/x-javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE application/x-httpd-php
+  AddOutputFilterByType DEFLATE image/svg+xml
+  AddOutputFilterByType DEFLATE font/ttf font/otf font/woff font/woff2
+</IfModule>
+
+# Brotli (sunucu destekliyorsa)
+<IfModule mod_brotli.c>
+  AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml font/woff font/woff2
+</IfModule>
+
+# ---------------------------------------------------------
+# 7. TARAYICI ÖNBELLEKLEME (Cache) - Tekrar ziyaretleri hızlandırır
+# ---------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault                                   "access plus 1 month"
+
+  # HTML - 1 saat (içerik değişince hızlı yansısın)
+  ExpiresByType text/html                          "access plus 1 hour"
+
+  # Veri / XML
+  ExpiresByType text/xml application/xml application/json "access plus 0 seconds"
+
+  # CSS / JS (hash'lenmiş dosyalar = 1 yıl)
+  ExpiresByType text/css                           "access plus 1 year"
+  ExpiresByType text/javascript                    "access plus 1 year"
+  ExpiresByType application/javascript             "access plus 1 year"
+  ExpiresByType application/x-javascript           "access plus 1 year"
+
+  # Resimler
+  ExpiresByType image/jpeg                         "access plus 1 year"
+  ExpiresByType image/jpg                          "access plus 1 year"
+  ExpiresByType image/png                          "access plus 1 year"
+  ExpiresByType image/gif                          "access plus 1 year"
+  ExpiresByType image/webp                         "access plus 1 year"
+  ExpiresByType image/avif                         "access plus 1 year"
+  ExpiresByType image/bmp                          "access plus 1 year"
+  ExpiresByType image/x-icon                       "access plus 1 year"
+  ExpiresByType image/svg+xml                      "access plus 1 year"
+
+  # Fontlar
+  ExpiresByType font/ttf                           "access plus 1 year"
+  ExpiresByType font/otf                           "access plus 1 year"
+  ExpiresByType font/woff                          "access plus 1 year"
+  ExpiresByType font/woff2                         "access plus 1 year"
+  ExpiresByType application/vnd.ms-fontobject      "access plus 1 year"
+</IfModule>
+
+# ---------------------------------------------------------
+# 8. CACHE CONTROL (expires modülü çalışmazsa yedek)
+# ---------------------------------------------------------
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "max-age=3600, public, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(css|js|js\.map|css\.map)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(jpg|jpeg|png|gif|webp|avif|svg|ico|bmp)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(ttf|otf|woff|woff2|eot)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+</IfModule>
+
+# ---------------------------------------------------------
+# 9. PHP AYARLARI (İletişim formu / uploadlar için)
+# ---------------------------------------------------------
+<IfModule mod_php.c>
+  php_value upload_max_filesize   16M
+  php_value post_max_size         20M
+  php_value memory_limit          256M
+  php_value max_execution_time    120
+  php_value max_input_time        120
+  php_value date.timezone         "Europe/Amsterdam"
+  php_value default_charset       "UTF-8"
+  php_flag  display_errors        Off
+  php_flag  log_errors            On
+</IfModule>
+
+# Alternatif PHP ayarları (PHP-FPM / cPanel için yorum satırını aç)
+# php_value upload_max_filesize 16M
+# php_value post_max_size 20M
+# php_value memory_limit 256M
+# php_value max_execution_time 120
+# php_value date.timezone "Europe/Amsterdam"
+
+# ---------------------------------------------------------
+# 10. ÖZEL HATA SAYFALARI (İhtiyacınıza göre HTML oluşturup aktif edin)
+# ---------------------------------------------------------
+# ErrorDocument 404 /404.html
+# ErrorDocument 500 /500.html

@@ -1,0 +1,39 @@
+# =========================================================
+# Emo Schildersbedrijf - robots.txt
+# Site: http://emoschildersbedrijf.nl/
+# =========================================================
+
+User-agent: *
+Allow: /
+
+# ---------------------------------------------------------
+# Yasaklı Klasörler ve Dosyalar
+# ---------------------------------------------------------
+# E-posta gönderen API betiği: Botların erişimine gerek yok
+Disallow: /api/
+
+# Admin / gizli klasörler varsa buraya ekleyin (örnek):
+# Disallow: /admin/
+# Disallow: /panel/
+
+# ---------------------------------------------------------
+# Site Haritası (Sitemap)
+# Not: Sitemap.xml daha sonra oluşturulursa aşağıdaki URL tam yolu kullanılır.
+# Oluşturma önerisi: https://emoschildersbedrijf.nl/sitemap.xml
+# Yardımcı: Ücretsiz online sitemap oluşturucu sitelerle 100 URL altı ücretsizdir
+# ---------------------------------------------------------
+Sitemap: http://emoschildersbedrijf.nl/sitemap.xml
+
+# Ana host (www farkı olmadan standart)
+Host: emoschildersbedrijf.nl
+
+# ---------------------------------------------------------
+# Bilgi: Yaygın Arama Motorları User-Agent'leri (bilgi amaçlı)
+# ---------------------------------------------------------
+# Googlebot     -> Google
+# Bingbot       -> Bing / Microsoft
+# DuckDuckBot   -> DuckDuckGo
+# Baiduspider   -> Baidu (Çin)
+# YandexBot     -> Yandex (Rusya)
+# Applebot      -> Apple Siri/Suggest
+# Slurp         -> Yahoo

@@ -1,0 +1,141 @@
+:root {
+  --bs-primary: #25acbf;
+  --bs-primary-rgb: 37, 172, 191;
+  --bs-light: #F8F8F8;
+  --bs-dark: #0b2960;
+  --bs-link-color: #25acbf;
+  --bs-link-hover-color: #1d8a9a;
+}
+
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  -webkit-text-stroke: 0 !important;
+  -webkit-text-stroke-width: 0 !important;
+  text-rendering: optimizeLegibility !important;
+  text-decoration: none !important;
+  outline: none !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  box-sizing: border-box;
+}
+
+*::before, *::after {
+  content: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  box-shadow: none !important;
+  display: none !important;
+  position: static !important;
+}
+
+/* ⚠️ Zorunlu pseudo-elementler (ikon / ok göstergeleri) tekrar açılıyor */
+.navbar .dropdown-toggle::after,
+.breadcrumb-item + .breadcrumb-item::before,
+.testimonial-carousel .owl-dots .owl-dot::after,
+.footer .btn.btn-link::before {
+  display: inline-block !important;
+  content: unset !important;
+  width: auto !important;
+  height: auto !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+a, p, span, strong, em, b, i, u, small, abbr, blockquote, pre, code,
+label, input, textarea, select, button, li, dt, dd, td, th, address, figcaption {
+  text-decoration: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn-primary {
+  --bs-btn-bg: #25acbf;
+  --bs-btn-border-color: #25acbf;
+  --bs-btn-hover-bg: #1d8a9a;
+  --bs-btn-hover-border-color: #1d8a9a;
+  --bs-btn-active-bg: #187583;
+  --bs-btn-active-border-color: #187583;
+  --bs-btn-disabled-bg: #25acbf;
+  --bs-btn-disabled-border-color: #25acbf;
+  color: #fff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+  color: #fff !important;
+}
+
+.border-primary {
+  --bs-border-opacity: 1;
+  border-color: rgba(var(--bs-primary-rgb), var(--bs-border-opacity)) !important;
+}
+
+.text-primary {
+  --bs-text-opacity: 1;
+  color: #0b2960 !important;
+}
+
+.bg-light {
+  background-color: #F8F8F8 !important;
+}
+
+.bg-dark {
+  background-color: #0b2960 !important;
+}
+
+.btn-outline-body {
+  color: #0b2960 !important;
+  border-color: #777777;
+}
+
+.btn-outline-body:hover {
+  color: #FFFFFF !important;
+  background: #25acbf !important;
+  border-color: #25acbf !important;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', 'Open Sans', sans-serif;
+  color: #252525;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  font-family: 'Oswald', 'Teko', sans-serif;
+  letter-spacing: 0;
+  word-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-stroke: 0;
+  text-stroke: 0;
+  text-rendering: optimizeLegibility;
+  text-decoration: none;
+  border: 0;
+  outline: 0;
+  -webkit-transform: translate3d(0,0,0);
+  transform: translate3d(0,0,0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
