@@ -8,6 +8,7 @@ import ProjectSection from '../sections/ProjectSection.jsx'
 import AppointmentSection from '../sections/AppointmentSection.jsx'
 import TestimonialCarousel from '../sections/TestimonialCarousel.jsx'
 import ContactSection from '../sections/ContactSection.jsx'
+import CareerSection from '../sections/CareerSection.jsx'
 
 export default function Home() {
   const ref = useWowReveal()
@@ -22,6 +23,7 @@ export default function Home() {
       <ProjectSection />
       <ContactSection />
       <TestimonialCarousel />
+      <CareerSection />
     </div>
   )
 }

@@ -38,10 +38,10 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 $config = [
     'smtp_host' => getenv('SMTP_HOST') ?: 'mail.emoschildersbedrijf.nl',
-    'smtp_port' => (int)(getenv('SMTP_PORT') ?: 587), // 465 yerine 587 deneyin
+    'smtp_port' => (int)(getenv('SMTP_PORT') ?: 587),
     'smtp_user' => getenv('SMTP_USER') ?: 'info@emoschildersbedrijf.nl',
     'smtp_pass' => getenv('SMTP_PASS') ?: '*+ig_VXm&qyAO^9S',
-    'smtp_secure' => getenv('SMTP_SECURE') ?: PHPMailer::ENCRYPTION_STARTTLS, // SMTPS yerine STARTTLS
+    'smtp_secure' => getenv('SMTP_SECURE') ?: PHPMailer::ENCRYPTION_STARTTLS,
     'from_email' => getenv('FROM_EMAIL') ?: 'info@emoschildersbedrijf.nl',
     'from_name'  => getenv('FROM_NAME') ?: 'Emo Schildersbedrijf Website',
     'to_email'   => getenv('TO_EMAIL') ?: 'info@emoschildersbedrijf.nl',
@@ -75,8 +75,11 @@ $debugInfo = [
     'sockets'    => extension_loaded('sockets') ? true : false,
 ];
 
+// Form tiplerine göre zorunlu alanlar
 if ($formType === 'appointment') {
     $required = ['name', 'email', 'mobile', 'service', 'date', 'time'];
+} elseif ($formType === 'job_application') {
+    $required = ['name', 'email', 'mobile', 'specialty', 'experience'];
 } else {
     $required = ['name', 'email', 'subject', 'message'];
 }
@@ -101,14 +104,17 @@ if (!empty($missing)) {
     exit;
 }
 
-$name    = trim($data['name']);
-$email   = trim($data['email']);
-$mobile  = trim($data['mobile'] ?? '');
-$service = trim($data['service'] ?? '');
-$date    = trim($data['date'] ?? '');
-$time    = trim($data['time'] ?? '');
-$subject = trim($data['subject'] ?? '');
-$message = trim($data['message'] ?? '');
+$name             = trim($data['name']);
+$email            = trim($data['email']);
+$mobile           = trim($data['mobile'] ?? '');
+$service          = trim($data['service'] ?? '');
+$date             = trim($data['date'] ?? '');
+$time             = trim($data['time'] ?? '');
+$subject          = trim($data['subject'] ?? '');
+$message          = trim($data['message'] ?? '');
+$specialty        = trim($data['specialty'] ?? '');
+$experience       = trim($data['experience'] ?? '');
+$hasDriverLicense = trim($data['hasDriverLicense'] ?? 'yes');
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode([
@@ -123,9 +129,9 @@ if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
     echo json_encode([
         'success' => false,
         'message' => txt(
-            'Sunucu yapılandırması eksik: PHPMailer kütüphanesi kurulmamış. README.md dosyasını inceleyin.',
-            'Server configuratie ontbreekt: PHPMailer bibliotheek is niet geinstalleerd. Bekijk README.md.',
-            'Server setup incomplete: PHPMailer library is not installed. Check README.md.'
+            'Sunucu yapılandırması eksik: PHPMailer kütüphanesi kurulmamış.',
+            'Server configuratie ontbreekt: PHPMailer bibliotheek is niet geïnstalleerd.',
+            'Server setup incomplete: PHPMailer library is not installed.'
         ),
     ]);
     http_response_code(500);
@@ -158,78 +164,89 @@ try {
 
     if ($formType === 'appointment') {
         $services = [
-            '1' => txt('İç Mekan Boyama',              'Interieur schilderwerk',            'Interior Painting'),
-            '2' => txt('Dış Cephe Boyama',             'Buitenschilderwerk / Gevel',         'Exterior / Facade Painting'),
-            '3' => txt('Bakım Boyama / MJOP',          'Onderhoud schilderwerk / MJOP',      'Maintenance Painting / MJOP'),
-            '4' => txt('Ahşap Tamiri ve Boyama',       'Houtrot reparatie & schilderwerk',   'Wood Rot Repair & Painting'),
-            '5' => txt('Lateks (Plastik) Boyama',      'Latex / Muurverf',                   'Latex / Wall Paint'),
-            '6' => txt('Duvar Kağıdı & Renovlies',     'Behang & Renovlies',                 'Wallpaper & Renovlies'),
+            '1' => txt('İç Mekan Boyama', 'Interieur schilderwerk', 'Interior Painting'),
+            '2' => txt('Dış Cephe Boyama', 'Buitenschilderwerk / Gevel', 'Exterior / Facade Painting'),
+            '3' => txt('Bakım Boyama / MJOP', 'Onderhoud schilderwerk / MJOP', 'Maintenance Painting / MJOP'),
+            '4' => txt('Ahşap Tamiri ve Boyama', 'Houtrot reparatie & schilderwerk', 'Wood Rot Repair & Painting'),
+            '5' => txt('Lateks (Plastik) Boyama', 'Latex / Muurverf', 'Latex / Wall Paint'),
+            '6' => txt('Duvar Kağıdı & Renovlies', 'Behang & Renovlies', 'Wallpaper & Renovlies'),
         ];
         $serviceLabel = $services[$service] ?? $service;
 
-        $mailSubject = sprintf(
-            '[%s] %s - %s',
-            txt('Randevu', 'Afspraak', 'Appointment'),
-            $name,
-            $serviceLabel
-        );
-
-        $labelName     = txt('Ad Soyad',       'Naam',        'Full Name');
-        $labelPhone    = txt('Telefon',        'Telefoon',    'Phone');
-        $labelService  = txt('Hizmet',         'Dienst',      'Service');
-        $labelDate     = txt('Tarih',          'Datum',       'Date');
-        $labelTime     = txt('Saat',           'Tijd',        'Time');
-        $labelNote     = txt('Not',            'Notitie',     'Note');
-        $heading       = txt('Yeni Randevu Talebi', 'Nieuwe afsprakaanvraag', 'New Appointment Request');
+        $mailSubject = sprintf('[%s] %s - %s', txt('Randevu', 'Afspraak', 'Appointment'), $name, $serviceLabel);
 
         $bodyHtml = '
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333;">
-          <h2 style="color:#0b2960;">' . $heading . '</h2>
+          <h2 style="color:#0b2960;">' . txt('Yeni Randevu Talebi', 'Nieuwe afsprakaanvraag', 'New Appointment Request') . '</h2>
           <table style="border-collapse:collapse;width:100%;max-width:600px;">
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;width:35%;">' . $labelName . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($name) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;width:35%;">' . txt('Ad Soyad', 'Naam', 'Full Name') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($name) . '</td></tr>
             <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">E-mail:</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($email) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . $labelPhone . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($mobile) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . $labelService . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($serviceLabel) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . $labelDate . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($date) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . $labelTime . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($time) . '</td></tr>';
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Telefon', 'Telefoon', 'Phone') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($mobile) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Hizmet', 'Dienst', 'Service') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($serviceLabel) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Tarih', 'Datum', 'Date') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($date) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Saat', 'Tijd', 'Time') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($time) . '</td></tr>';
         if (!empty($message)) {
-            $bodyHtml .= '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;vertical-align:top;">' . $labelNote . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . nl2br(htmlspecialchars($message)) . '</td></tr>';
+            $bodyHtml .= '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;vertical-align:top;">' . txt('Not', 'Notitie', 'Note') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . nl2br(htmlspecialchars($message)) . '</td></tr>';
         }
-        $bodyHtml .= '
-          </table>
-          <p style="margin-top:20px;color:#777;font-size:12px;">' . txt(
-            'Bu e-posta Emo Schildersbedrijf iletişim formu aracılığıyla gönderilmiştir.',
-            'Deze e-mail is verzonden via het Emo Schildersbedrijf contactformulier.',
-            'This e-mail was sent via the Emo Schildersbedrijf contact form.'
-          ) . '</p>
-        </div>';
-    } else {
-        $labelName     = txt('Ad Soyad',   'Naam',        'Full Name');
-        $labelSubject  = txt('Konu',       'Onderwerp',   'Subject');
-        $labelMessage  = txt('Mesaj',      'Bericht',     'Message');
-        $heading       = txt('Yeni İletişim Mesajı', 'Nieuw contactbericht', 'New Contact Message');
+        $bodyHtml .= '</table></div>';
 
-        $mailSubject = sprintf(
-            '[%s] %s - %s',
-            txt('İletişim', 'Contact', 'Contact'),
-            $name,
-            $subject
-        );
+    } elseif ($formType === 'job_application') {
+        $specialties = [
+            '1' => txt('İç Mekan Boyama', 'Interieur schilderwerk', 'Interior Painting'),
+            '2' => txt('Dış Cephe Boyama', 'Buitenschilderwerk / Gevel', 'Exterior / Facade Painting'),
+            '3' => txt('Bakım Boyama / MJOP', 'Onderhoud schilderwerk / MJOP', 'Maintenance Painting / MJOP'),
+            '4' => txt('Ahşap Tamiri ve Boyama', 'Houtrot reparatie & schilderwerk', 'Wood Rot Repair & Painting'),
+            '5' => txt('Lateks (Plastik) Boyama', 'Latex / Muurverf', 'Latex / Wall Paint'),
+            '6' => txt('Duvar Kağıdı & Renovlies', 'Behang & Renovlies', 'Wallpaper & Renovlies'),
+            'schilder' => txt('İç & Dış Boya Ustası', 'Binnen & Buitenschilder', 'Interior & Exterior Painter'),
+            'behangen' => txt('Duvar Kağıdı Ustası', 'Behangspecialist', 'Wallpaper Specialist'),
+            'houtrot'  => txt('Ahşap Tamiri & Bakım', 'Houtrot reparatie & onderhoud', 'Wood Rot Repair & Maintenance'),
+            'stucwerk' => txt('Sıva & Alçı Ustası', 'Stukadoor', 'Plasterer'),
+            'andere'   => txt('Diğer / Genel İşçi', 'Overige / Algemeen medewerker', 'Other / General Worker'),
+        ];
+
+        $experiences = [
+            '0-2'  => txt('0 - 2 Yıl', '0 - 2 Jaar', '0 - 2 Years'),
+            '3-5'  => txt('3 - 5 Yıl', '3 - 5 Jaar', '3 - 5 Years'),
+            '5-10' => txt('5 - 10 Yıl', '5 - 10 Jaar', '5 - 10 Years'),
+            '10+'  => txt('10 Yıldan Fazla', 'Meer dan 10 jaar', 'More than 10 years'),
+        ];
+
+        $specialtyLabel  = $specialties[$specialty] ?? $specialty;
+        $experienceLabel = $experiences[$experience] ?? $experience;
+        $licenseLabel    = ($hasDriverLicense === 'yes') 
+            ? txt('Evet (B Sınıfı veya Üstü)', 'Ja (Rijbewijs B)', 'Yes (Driver License B)')
+            : txt('Hayır', 'Nee', 'No');
+
+        $mailSubject = sprintf('[%s] %s - %s', txt('İş Başvurusu', 'Sollicitatie', 'Job Application'), $name, $specialtyLabel);
 
         $bodyHtml = '
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333;">
-          <h2 style="color:#0b2960;">' . $heading . '</h2>
+          <h2 style="color:#0b2960;">' . txt('Yeni İş Başvurusu', 'Nieuwe Sollicitatie', 'New Job Application') . '</h2>
           <table style="border-collapse:collapse;width:100%;max-width:600px;">
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;width:35%;">' . $labelName . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($name) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;width:35%;">' . txt('Ad Soyad', 'Naam', 'Full Name') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($name) . '</td></tr>
             <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">E-mail:</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($email) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . $labelSubject . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($subject) . '</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;vertical-align:top;">' . $labelMessage . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . nl2br(htmlspecialchars($message)) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Telefon', 'Telefoon', 'Phone') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($mobile) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Uzmanlık Alanı', 'Vakgebied', 'Specialty') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($specialtyLabel) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Tecrübe', 'Ervaring', 'Experience') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($experienceLabel) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Sürücü Belgesi', 'Rijbewijs', 'Driver License') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($licenseLabel) . '</td></tr>';
+        if (!empty($message)) {
+            $bodyHtml .= '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;vertical-align:top;">' . txt('Açıklama / Mesaj', 'Bericht', 'Message') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . nl2br(htmlspecialchars($message)) . '</td></tr>';
+        }
+        $bodyHtml .= '</table></div>';
+
+    } else {
+        $mailSubject = sprintf('[%s] %s - %s', txt('İletişim', 'Contact', 'Contact'), $name, $subject);
+
+        $bodyHtml = '
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333;">
+          <h2 style="color:#0b2960;">' . txt('Yeni İletişim Mesajı', 'Nieuw contactbericht', 'New Contact Message') . '</h2>
+          <table style="border-collapse:collapse;width:100%;max-width:600px;">
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;width:35%;">' . txt('Ad Soyad', 'Naam', 'Full Name') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($name) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">E-mail:</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($email) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;">' . txt('Konu', 'Onderwerp', 'Subject') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . htmlspecialchars($subject) . '</td></tr>
+            <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:bold;vertical-align:top;">' . txt('Mesaj', 'Bericht', 'Message') . ':</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">' . nl2br(htmlspecialchars($message)) . '</td></tr>
           </table>
-          <p style="margin-top:20px;color:#777;font-size:12px;">' . txt(
-            'Bu e-posta Emo Schildersbedrijf iletişim formu aracılığıyla gönderilmiştir.',
-            'Deze e-mail is verzonden via het Emo Schildersbedrijf contactformulier.',
-            'This e-mail was sent via the Emo Schildersbedrijf contact form.'
-          ) . '</p>
         </div>';
     }
 
@@ -242,49 +259,21 @@ try {
 
     echo json_encode([
         'success' => true,
-        'message' => $formType === 'appointment'
-            ? txt(
-                'Teşekkürler! Randevu talebiniz alındı. En kısa sürede sizinle iletişime geçeceğiz.',
-                'Bedankt! Uw afspraakaanvraag is ontvangen. Wij nemen zo snel mogelijk contact met u op.',
-                'Thank you! Your appointment request has been received. We will contact you as soon as possible.'
-            )
-            : txt(
-                'Teşekkürler! Mesajınız gönderildi. En kısa sürede sizinle iletişime geçeceğiz.',
-                'Bedankt! Uw bericht is verzonden. Wij nemen zo snel mogelijk contact met u op.',
-                'Thank you! Your message has been sent. We will contact you as soon as possible.'
-            ),
+        'message' => txt(
+            'Teşekkürler! Talebiniz başarıyla alındı.',
+            'Bedankt! Uw aanvraag is succesvol ontvangen.',
+            'Thank you! Your request has been successfully received.'
+        ),
     ]);
     http_response_code(200);
 } catch (\Throwable $e) {
-    $errorMsg  = isset($mail) ? trim((string)$mail->ErrorInfo) : '';
+    $errorMsg = isset($mail) ? trim((string)$mail->ErrorInfo) : '';
     if ($errorMsg === '') $errorMsg = trim((string)$e->getMessage());
-    $lowerErr  = mb_strtolower($errorMsg, 'UTF-8');
-    $hints     = [];
-    if (stripos($lowerErr, 'could not connect') !== false || stripos($lowerErr, 'connection') !== false || stripos($lowerErr, 'smtp connect()') !== false) {
-        $hints[] = 'SMTP bağlantı hatası: Firewall/port 465, DNS veya hosting tarafında giden SMTP izinlerini kontrol edin.';
-    }
-    if (stripos($lowerErr, 'authentication') !== false || stripos($lowerErr, 'password') !== false || stripos($lowerErr, 'username') !== false) {
-        $hints[] = 'E-posta şifresi hatalı olabilir. Hosting panelindeki info@emoschildersbedrijf.nl şifresi ile $config[\'smtp_pass\'] alanını eşleştirin.';
-    }
-    if (stripos($lowerErr, 'ssl') !== false || stripos($lowerErr, 'tls') !== false || stripos($lowerErr, 'certificate') !== false) {
-        $hints[] = 'SSL/TLS sertifika doğrulama sorunu. Alternatif: Port 587 + STARTTLS deneyin.';
-    }
-    if (empty($hints)) $hints[] = 'Detay için debug alanını inceleyin; hosting hatası veya form doğrulaması olabilir.';
 
-    $response = [
+    echo json_encode([
         'success' => false,
-        'message' => txt(
-            'Mesaj gönderilemedi. SMTP sunucu ayarlarınızı kontrol edin. Hata: ' . mb_substr($errorMsg, 0, 60),
-            'Bericht kon niet verzonden worden. Controleer uw SMTP-serverinstellingen. Fout: ' . mb_substr($errorMsg, 0, 60),
-            'Message could not be sent. Check your SMTP server settings. Error: ' . mb_substr($errorMsg, 0, 60)
-        ),
-        'hints'    => $hints,
-        'error'    => $errorMsg,
-        'debug'    => array_merge($debugInfo, [
-            'fileLine' => $e->getFile() . '::' . $e->getLine(),
-            'exception' => get_class($e),
-        ]),
-    ];
-    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        'message' => txt('Mesaj gönderilemedi. Hata: ' . mb_substr($errorMsg, 0, 60), 'Bericht kon niet verzonden worden.', 'Message could not be sent.'),
+        'error'   => $errorMsg,
+    ], JSON_UNESCAPED_UNICODE);
     http_response_code(500);
 }

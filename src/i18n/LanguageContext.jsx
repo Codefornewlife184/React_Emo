@@ -4,7 +4,14 @@ import { servicePageData as basePageData, services as baseServices } from '../da
 
 const LanguageContext = createContext(null)
 
-const LANGS = ['tr', 'nl', 'en']
+const LANGS = ['nl', 'en', 'tr']
+
+// Dil değişim sırasını açık şekilde tanımlıyoruz (Sıra kaymasını %100 önler)
+const NEXT_LANG_MAP = {
+  nl: 'en',
+  en: 'tr',
+  tr: 'nl'
+}
 
 const SERVICE_SLUGS = [
   'ic-mekan-boyama',
@@ -15,13 +22,10 @@ const SERVICE_SLUGS = [
 ]
 
 const pickLang = () => {
-  if (typeof window === 'undefined') return 'tr'
+  if (typeof window === 'undefined') return 'nl'
   const stored = window.localStorage.getItem('lang')
   if (stored && LANGS.includes(stored)) return stored
-  const nav = (window.navigator.language || 'tr').toLowerCase()
-  if (nav.startsWith('nl')) return 'nl'
-  if (nav.startsWith('en')) return 'en'
-  return 'tr'
+  return 'nl'
 }
 
 export function LanguageProvider({ children }) {
@@ -35,6 +39,7 @@ export function LanguageProvider({ children }) {
   }, [language])
 
   const lookupRaw = (dict, keys) => {
+    if (!dict) return undefined
     let cur = dict
     for (const k of keys) {
       if (cur && typeof cur === 'object' && k in cur) {
@@ -49,96 +54,99 @@ export function LanguageProvider({ children }) {
   const t = (key) => {
     if (!key) return ''
     const keys = key.split('.')
+    
+    // 1. Önce seçili aktif dilde ara
     const fromCurrent = lookupRaw(translations[language], keys)
-    if (fromCurrent !== undefined) return fromCurrent
-    const fromTr = lookupRaw(translations.tr, keys)
-    if (fromTr !== undefined) return fromTr
-    if (fromTr === undefined && fromCurrent === undefined) return key
+    if (fromCurrent !== undefined && fromCurrent !== '') return fromCurrent
+
+    // 2. Yoksa varsayılan NL (Hollandaca) yedeğe bak
+    const fromNl = lookupRaw(translations.nl, keys)
+    if (fromNl !== undefined && fromNl !== '') return fromNl
+
     return key
   }
 
-  const nextLanguage = (prev) => {
-    const idx = LANGS.indexOf(prev)
-    if (idx < 0) return 'tr'
-    return LANGS[(idx + 1) % LANGS.length]
+  const getSlugTitle = (slug) => {
+    return (
+      serviceTitles?.[language]?.[slug] ||
+      serviceTitles?.nl?.[slug] ||
+      slug
+    )
+  }
+
+  const getServices = () => {
+    return (baseServices || []).map((s) => ({
+      ...s,
+      title: getSlugTitle(s.slug),
+      description:
+        serviceContent?.[language]?.[s.slug]?.shortDescription ||
+        serviceContent?.nl?.[s.slug]?.shortDescription ||
+        s.description,
+    }))
   }
 
   const getPageData = (slug) => {
     const base = basePageData[slug]
     if (!base) return null
     const langContent = serviceContent?.[language]?.[slug] || {}
-    const trContent = serviceContent?.tr?.[slug] || {}
-    const pageTitle = serviceTitles[language]?.[slug] || serviceTitles.tr[slug] || slug
+    const nlContent = serviceContent?.nl?.[slug] || {}
+    const pageTitle = getSlugTitle(slug)
 
     const heroFeatures = (langContent.hero?.features && langContent.hero.features.length)
       ? langContent.hero.features
-      : (trContent.hero?.features && trContent.hero.features.length)
-        ? trContent.hero.features
+      : (nlContent.hero?.features && nlContent.hero.features.length)
+        ? nlContent.hero.features
         : (base.hero?.features || [])
 
     const cards = (langContent.cards && langContent.cards.length)
       ? langContent.cards
-      : (trContent.cards && trContent.cards.length)
-        ? trContent.cards
+      : (nlContent.cards && nlContent.cards.length)
+        ? nlContent.cards
         : (base.cards || [])
 
     const processSteps = (langContent.process && langContent.process.length)
       ? langContent.process
-      : (trContent.process && trContent.process.length)
-        ? trContent.process
+      : (nlContent.process && nlContent.process.length)
+        ? nlContent.process
         : (base.process || [])
-
-    const heroTitle = langContent.hero?.title || trContent.hero?.title || pageTitle
-    const heroDescription = langContent.hero?.description
-      || trContent.hero?.description
-      || base.hero?.description
-      || ''
-    const ctaText = langContent.ctaText || trContent.ctaText || base.ctaText || ''
-    const cardsTitle = langContent.cardsTitle || trContent.cardsTitle || base.cardsTitle || ''
-    const processTitle = langContent.processTitle || trContent.processTitle || base.processTitle || ''
 
     return {
       ...base,
       pageHeaderTitle: pageTitle,
       hero: {
         ...(base.hero || {}),
-        title: heroTitle,
-        description: heroDescription,
+        title: langContent.hero?.title || nlContent.hero?.title || pageTitle,
+        description: langContent.hero?.description || nlContent.hero?.description || base.hero?.description || '',
         features: heroFeatures,
       },
-      ctaText,
-      cardsTitle,
-      processTitle,
+      ctaText: langContent.ctaText || nlContent.ctaText || base.ctaText || '',
+      cardsTitle: langContent.cardsTitle || nlContent.cardsTitle || base.cardsTitle || '',
+      processTitle: langContent.processTitle || nlContent.processTitle || base.processTitle || '',
       cards,
       process: processSteps,
     }
   }
 
-  const getServices = () => {
-    return (baseServices || []).map((s) => ({
-      ...s,
-      title: serviceTitles[language]?.[s.slug] || s.title,
-      description:
-        (serviceContent?.[language]?.[s.slug]?.shortDescription)
-        || (serviceContent?.tr?.[s.slug]?.shortDescription)
-        || s.description,
-    }))
+  // Doğrudan spesifik dil atamak için garanti fonksiyon
+  const changeLanguage = (newLang) => {
+    if (LANGS.includes(newLang)) {
+      setLanguage(newLang)
+    }
   }
 
-  const getSlugTitle = (slug) => serviceTitles[language]?.[slug] || serviceTitles.tr?.[slug] || slug
+  // Sırayla geçiş için tam eşleşen toggle
+  const toggleLanguage = () => {
+    setLanguage((prev) => NEXT_LANG_MAP[prev] || 'nl')
+  }
 
   const value = {
     language,
-    setLanguage,
+    setLanguage: changeLanguage,
     languages: LANGS,
-    toggleLanguage: () => setLanguage((prev) => nextLanguage(prev)),
+    toggleLanguage,
     t,
-    translations: translations[language],
-    translationsAll: translations,
-    serviceTitles: serviceTitles[language],
-    serviceTitlesAll: serviceTitles,
-    getPageData,
     getServices,
+    getPageData,
     getSlugTitle,
     serviceSlugs: SERVICE_SLUGS,
   }

@@ -1,14 +1,12 @@
 import useWowReveal from '../hooks/useWowReveal.js'
 import PageHeader from '../components/PageHeader.jsx'
-import AppointmentSection from '../sections/AppointmentSection.jsx'
 import CareerSection from '../sections/CareerSection.jsx'
 
-export default function Appointment() {
+export default function Career() {
   const ref = useWowReveal()
   return (
     <div ref={ref}>
-      <PageHeader pageKey="appointment" />
-      <AppointmentSection />
+      <PageHeader pageKey="career" />
       <CareerSection />
     </div>
   )

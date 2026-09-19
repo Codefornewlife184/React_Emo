@@ -23,7 +23,9 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [servicesDropdown, setServicesDropdown] = useState(false);
-  const { t, serviceTitles, serviceSlugs } = useLanguage();
+  
+  // getSlugTitle kullanımı ile güvenli başlık çekimi sağlandı
+  const { t, getSlugTitle, serviceSlugs = [] } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,7 +66,6 @@ export default function Navbar() {
       document.body.style.overflow = bodyOverflow;
       setBodyOverflow(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
   const desktopPad = "clamp(0.6rem, 5vw, 8rem)";
@@ -73,12 +74,10 @@ export default function Navbar() {
   const totalNavH = topbarH + 112;
   const mobileMenuTop = `${totalNavH + 10}px`;
 
-  const navLinkClass = ({ isActive }) =>
-    `nav-item nav-link ${isActive ? "active" : ""}`;
-
+  // Alt hizmet başlıklarını güvenli şekilde çeken dizi
   const subServices = serviceSlugs.map((slug) => ({
     slug,
-    title: serviceTitles[slug] || slug,
+    title: getSlugTitle(slug),
   }));
 
   const mainNavItems = [
@@ -129,7 +128,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ===== FIXED NAVBAR + TOPBAR (KESÄ°NLÄ°KLE SABÄ°T ÃœSTTE) ===== */}
+      {/* ===== FIXED NAVBAR + TOPBAR ===== */}
       <div
         style={{
           position: "fixed",
@@ -185,7 +184,7 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Mobil Hamburger (GeliÅŸmiÅŸ) - xl altÄ± gÃ¶rÃ¼nÃ¼r */}
+            {/* Mobil Hamburger */}
             <button
               type="button"
               className="btn navbar-toggler d-xl-none d-inline-flex align-items-center justify-content-center p-2"
@@ -214,13 +213,12 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* MENU + CTA - Desktop (lg+) yatay */}
+            {/* MENU + CTA - Desktop */}
             <div
               className="collapse navbar-collapse"
               id="navbarCollapse"
               style={{ flexBasis: "auto", flexGrow: 0, alignSelf: "center" }}
             >
-              {/* MasaÃ¼stÃ¼ Yatay MenÃ¼ (xl+) */}
               <div
                 className="d-none d-xl-flex align-items-center justify-content-end gap-1"
                 style={{
@@ -373,7 +371,6 @@ export default function Navbar() {
                         </div>
                       );
                     }
-                    // Normal link (desktop)
                     return (
                       <NavLink
                         key={it.key}
@@ -425,7 +422,7 @@ export default function Navbar() {
                   })}
                 </div>
 
-                {/* ILETISIM YANI IKONLAR: TEL + WHATSAPP (Sadece MasaÃ¼stÃ¼ xl+) */}
+                {/* İLETİŞİM İKONLARI */}
                 <div
                   className="d-none d-xl-inline-flex align-items-center gap-2 mx-2"
                   style={{ alignSelf: "center", flexShrink: 0 }}
@@ -512,7 +509,7 @@ export default function Navbar() {
                   </a>
                 </div>
 
-                {/* CTA: Ãœcretsiz KeÅŸif (Sadece MasaÃ¼stÃ¼ xl+) */}
+                {/* CTA Buton */}
                 <Link
                   to="/appointment"
                   className="btn d-none d-xl-inline-flex align-items-center justify-content-center ms-1"
@@ -557,7 +554,6 @@ export default function Navbar() {
         </nav>
       </div>
 
-      {/* ===== FIXED NAVBAR ICÄ°N ICERIK BOSLUGU (ustteki sabit alan kadar asagi it) ===== */}
       <div
         style={{
           height: `${totalNavH}px`,
@@ -567,10 +563,9 @@ export default function Navbar() {
         }}
       />
 
-      {/* ===== MOBÄ°L MENÃœ (lg altÄ±) - VIEWPORT DIÅINDA, KESÄ°N FIXED ===== */}
+      {/* MOBİL MENÜ */}
       {menuOpen && (
         <>
-          {/* ARKA KAPLAMA - viewport tam kaplar */}
           <div
             onClick={closeAll}
             style={{
@@ -586,7 +581,6 @@ export default function Navbar() {
               boxSizing: "border-box",
             }}
           />
-          {/* ANA KART - viewporta gore, sticky-top kapsayÄ±cÄ±sÄ±ndan TAMAMEN BAÄIMSIZ */}
           <div
             style={{
               position: "fixed",
@@ -824,25 +818,6 @@ export default function Navbar() {
           </div>
         </>
       )}
-      {/* Navbar FIXED konumunu ZORUNLU TUT */}
-      <style>{`
-        body > div[style*="position: fixed"][style*="z-index: 1030"][style*="background-color: rgb"] {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          width: 100% !important;
-          z-index: 1030 !important;
-          display: block !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-          pointer-events: auto !important;
-          transform: translateZ(0) !important;
-          -webkit-transform: translateZ(0) !important;
-          backface-visibility: hidden !important;
-          -webkit-backface-visibility: hidden !important;
-        }
-      `}</style>
     </>
   );
 }

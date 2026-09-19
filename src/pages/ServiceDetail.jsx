@@ -1,12 +1,20 @@
-import { createElement, useMemo, useState } from 'react'
+import { createElement, useMemo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import * as FaIcons from 'react-icons/fa6'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader.jsx'
-import Lightbox from '../components/Lightbox.jsx'
 import useWowReveal from '../hooks/useWowReveal.js'
 import { useLanguage } from '../i18n/LanguageContext.jsx'
 import { services } from '../data/data.js'
-import { FaCalendarDays, FaPhone, FaCalendarCheck, FaMagnifyingGlassPlus } from 'react-icons/fa6'
+import { 
+  FaCalendarDays, 
+  FaPhone, 
+  FaCalendarCheck, 
+  FaMagnifyingGlassPlus, 
+  FaXmark, 
+  FaChevronLeft, 
+  FaChevronRight 
+} from 'react-icons/fa6'
 
 const legacyIconMap = {
   'brush': 'Brush',
@@ -119,11 +127,56 @@ export default function ServiceDetail({ slug }) {
     alt: `${pageTitle} - ${f}`,
   })), [folder, files, pageTitle])
 
-  const [lbOpen, setLbOpen] = useState(false)
-  const [lbIndex, setLbIndex] = useState(0)
-  const handleLb = (payload) => {
-    if (payload?.action === 'close') setLbOpen(false)
-    else if (payload?.action === 'navigate') setLbIndex(payload.index)
+  // Hero Yanı Görseller
+  const heroImages = useMemo(() => {
+    if (!currentService) return []
+    const secondImg = services[(services.indexOf(currentService) + 2) % services.length]?.image
+    return [
+      { src: currentService.image, alt: currentService.title },
+      secondImg ? { src: secondImg, alt: '' } : null
+    ].filter(Boolean)
+  }, [currentService])
+
+  // Lightbox Durumu (Mod mod: 'hero' veya 'gallery')
+  const [activeModal, setActiveModal] = useState(null) // { type: 'hero'|'gallery', index: number }
+
+  const modalImages = useMemo(() => {
+    if (activeModal?.type === 'hero') return heroImages
+    if (activeModal?.type === 'gallery') return galleryImages
+    return []
+  }, [activeModal, heroImages, galleryImages])
+
+  useEffect(() => {
+    if (!activeModal) return
+
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveModal(null)
+      } else if (e.key === 'ArrowLeft') {
+        setActiveModal((prev) => prev ? ({ ...prev, index: prev.index > 0 ? prev.index - 1 : modalImages.length - 1 }) : null)
+      } else if (e.key === 'ArrowRight') {
+        setActiveModal((prev) => prev ? ({ ...prev, index: prev.index < modalImages.length - 1 ? prev.index + 1 : 0 }) : null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = 'unset'
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [activeModal, modalImages.length])
+
+  const handlePrev = (e) => {
+    e.stopPropagation()
+    setActiveModal((prev) => prev ? ({ ...prev, index: prev.index > 0 ? prev.index - 1 : modalImages.length - 1 }) : null)
+  }
+
+  const handleNext = (e) => {
+    e.stopPropagation()
+    setActiveModal((prev) => prev ? ({ ...prev, index: prev.index < modalImages.length - 1 ? prev.index + 1 : 0 }) : null)
   }
 
   if (!data) {
@@ -202,17 +255,18 @@ export default function ServiceDetail({ slug }) {
             </div>
             <div className="col-lg-6 wow fadeIn" data-wow-delay="0.5s">
               <div className="about-img h-100" style={{ minHeight: '420px' }}>
-                {currentService && (
-                  <>
-                    <img className="img-fluid" src={currentService.image} alt={currentService.title} style={{ objectFit: 'cover' }} />
-                    <img
-                      className="img-fluid"
-                      src={services[(services.indexOf(currentService) + 2) % services.length].image}
-                      alt=""
-                      style={{ objectFit: 'cover' }}
-                    />
-                  </>
-                )}
+                {heroImages.map((img, idx) => (
+                  <img
+                    key={idx}
+                    className="img-fluid"
+                    src={img.src}
+                    alt={img.alt}
+                    style={{ objectFit: 'cover', cursor: 'pointer', transition: 'transform 0.2s' }}
+                    onClick={() => setActiveModal({ type: 'hero', index: idx })}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -300,76 +354,73 @@ export default function ServiceDetail({ slug }) {
           </div>
           <div className="row g-4 wow fadeInUp" data-wow-delay="0.2s" style={{ alignItems: 'stretch' }}>
             {galleryImages.map((img, i) => (
-                <div key={i} className="col-lg-3 col-md-4 col-sm-6 col-6" style={{ display: 'flex', alignItems: 'stretch' }}>
+              <div key={i} className="col-lg-3 col-md-4 col-sm-6 col-6" style={{ display: 'flex', alignItems: 'stretch' }}>
+                <div
+                  className="w-100 h-100 position-relative"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    padding: '10px 10px 26px 10px',
+                    borderRadius: '14px',
+                    boxShadow: '0 6px 18px rgba(11,41,96,0.12), 0 2px 4px rgba(11,41,96,0.06)',
+                    cursor: 'zoom-in',
+                    transition: 'transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease',
+                    transform: 'translateY(0) scale(1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-6px) scale(1.035)'
+                    e.currentTarget.style.boxShadow = '0 18px 40px rgba(11,41,96,0.26), 0 6px 14px rgba(11,41,96,0.14)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)'
+                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(11,41,96,0.12), 0 2px 4px rgba(11,41,96,0.06)'
+                  }}
+                  onClick={() => setActiveModal({ type: 'gallery', index: i })}
+                >
                   <div
-                    className="w-100 h-100 position-relative"
+                    className="w-100 overflow-hidden"
                     style={{
-                      backgroundColor: '#ffffff',
-                      padding: '10px 10px 26px 10px',
-                      borderRadius: '14px',
-                      boxShadow: '0 6px 18px rgba(11,41,96,0.12), 0 2px 4px rgba(11,41,96,0.06)',
-                      cursor: 'zoom-in',
-                      transition: 'transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease',
-                      transform: 'translateY(0) scale(1)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-6px) scale(1.035)'
-                      e.currentTarget.style.boxShadow = '0 18px 40px rgba(11,41,96,0.26), 0 6px 14px rgba(11,41,96,0.14)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0) scale(1)'
-                      e.currentTarget.style.boxShadow = '0 6px 18px rgba(11,41,96,0.12), 0 2px 4px rgba(11,41,96,0.06)'
-                    }}
-                    onClick={() => {
-                      setLbIndex(i)
-                      setLbOpen(true)
+                      borderRadius: '10px',
+                      backgroundColor: '#f3f6fb',
                     }}
                   >
-                    <div
-                      className="w-100 overflow-hidden"
+                    <img
+                      src={img.src}
+                      alt={img.alt}
+                      className="img-fluid w-100"
                       style={{
-                        borderRadius: '10px',
-                        backgroundColor: '#f3f6fb',
+                        width: '100%',
+                        height: '200px',
+                        objectFit: 'cover',
+                        display: 'block',
+                        transition: 'transform .5s ease',
                       }}
-                    >
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="img-fluid w-100"
-                        style={{
-                          width: '100%',
-                          height: '200px',
-                          objectFit: 'cover',
-                          display: 'block',
-                          transition: 'transform .5s ease',
-                        }}
-                        loading="lazy"
-                      />
-                    </div>
-                    <div
-                      className="position-absolute"
-                      style={{
-                        top: '10px',
-                        left: '10px',
-                        right: '10px',
-                        bottom: '26px',
-                        opacity: 0,
-                        transition: 'opacity .35s ease',
-                        backgroundColor: 'rgba(37,172,191,0.42)',
-                        color: '#fff',
-                        pointerEvents: 'none',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backdropFilter: 'blur(1.5px)',
-                      }}
-                    >
-                      <FaMagnifyingGlassPlus size={28} style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))' }} />
-                    </div>
+                      loading="lazy"
+                    />
+                  </div>
+                  <div
+                    className="position-absolute"
+                    style={{
+                      top: '10px',
+                      left: '10px',
+                      right: '10px',
+                      bottom: '26px',
+                      opacity: 0,
+                      transition: 'opacity .35s ease',
+                      backgroundColor: 'rgba(37,172,191,0.42)',
+                      color: '#fff',
+                      pointerEvents: 'none',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(1.5px)',
+                    }}
+                  >
+                    <FaMagnifyingGlassPlus size={28} style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))' }} />
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -398,12 +449,123 @@ export default function ServiceDetail({ slug }) {
         </div>
       </div>
 
-      <Lightbox
-        images={galleryImages}
-        startIndex={lbIndex}
-        isOpen={lbOpen}
-        onClose={handleLb}
-      />
+      {/* PORTAL İLE OKLU TAM EKRAN LIGHTBOX MODAL */}
+      {activeModal !== null && modalImages.length > 0 && createPortal(
+        <div 
+          onClick={() => setActiveModal(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          {/* Kapat Butonu */}
+          <button
+            onClick={() => setActiveModal(null)}
+            style={{
+              position: 'fixed',
+              top: '20px',
+              right: '25px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: '#fff',
+              width: '45px',
+              height: '45px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              zIndex: 1000000
+            }}
+          >
+            <FaXmark />
+          </button>
+
+          {/* Sol Ok */}
+          <button
+            onClick={handlePrev}
+            style={{
+              position: 'fixed',
+              left: '20px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: '#fff',
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              zIndex: 1000000,
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.4)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+          >
+            <FaChevronLeft />
+          </button>
+
+          {/* Aktif Görsel */}
+          <img 
+            src={modalImages[activeModal.index]?.src} 
+            alt={modalImages[activeModal.index]?.alt || 'Büyütülmüş Görsel'} 
+            style={{
+              maxWidth: '85vw',
+              maxHeight: '85vh',
+              borderRadius: '8px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+              objectFit: 'contain'
+            }} 
+            onClick={(e) => e.stopPropagation()} 
+          />
+
+          {/* Sağ Ok */}
+          <button
+            onClick={handleNext}
+            style={{
+              position: 'fixed',
+              right: '20px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: '#fff',
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              cursor: 'pointer',
+              zIndex: 1000000,
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.4)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+          >
+            <FaChevronRight />
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

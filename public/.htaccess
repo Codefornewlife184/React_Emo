@@ -34,7 +34,6 @@ ServerTokens Prod
 
 # ---------------------------------------------------------
 # 3. HTTP -> HTTPS ZORLAMA (SSL SERTİFİKASI KURULUNCA AÇIN)
-#    Aşağıdaki 4 satırın başındaki "#" işaretlerini silin
 # ---------------------------------------------------------
 # <IfModule mod_rewrite.c>
 #   RewriteCond %{HTTPS} !=on
@@ -42,21 +41,22 @@ ServerTokens Prod
 # </IfModule>
 
 # ---------------------------------------------------------
-# 4. REACT ROUTER SPA FALLBACK (ÖNEMLİ)
-#    Var olmayan /service/... gibi URL'ler index.html'e
-#    yönlenir (aksi halde 404 hatası alırsınız)
-#    /api/ altındaki PHP dosyaları hariç tutulur
+# 4. REACT ROUTER SPA FALLBACK (DÜZELTİLDİ)
+#    Var olmayan sayfa yönlendirmeleri index.html'e gider.
+#    Statik dosyalar (js, css, resim, api) hariç tutulur.
 # ---------------------------------------------------------
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteBase /
 
-  # Gerçek dosya / klasör ise atla
+  # Gerçek dosya veya klasör varsa doğrudan onu sun
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # /api/ altındakiler hariç her şeyi index.html'e gönder
+  # Statik dosyaları (JS, CSS, Resim, Font) ve /api/ yolunu HTML yönlendirmesinden hariç tut
   RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$ [NC]
   RewriteRule ^ index.html [L]
 </IfModule>
 
@@ -64,30 +64,15 @@ ServerTokens Prod
 # 5. GÜVENLİK BAŞLIKLARI (HTTP Headers)
 # ---------------------------------------------------------
 <IfModule mod_headers.c>
-  # MIME türünü zorla (tarayıcının dosya türünü tahmin etmesini engelle)
   Header set X-Content-Type-Options "nosniff"
-
-  # Siteyi başka sitenin iframe'ine koymayı engelle (clickjacking koruması)
   Header set X-Frame-Options "SAMEORIGIN"
-
-  # XSS filtresi
   Header set X-XSS-Protection "1; mode=block"
-
-  # Referrer politikası (kısmen gizle)
   Header set Referrer-Policy "strict-origin-when-cross-origin"
-
-  # Tarayıcı izinleri (kamera, mikrofon vb. istemeyiz)
   Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), autoplay=(), fullscreen=self"
-
-  # Strict-Transport-Security (SSL KURULUNCA AÇIN - # kaldır)
-  # Header set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
-
-  # İçerik Güvenlik Politikası (ihtiyaca göre özelleştirin - şimdiki yorum)
-  # Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self'"
 </IfModule>
 
 # ---------------------------------------------------------
-# 6. GZIP / BROTLI SIKIŞTIRMA (Sayfa yüklemesini hızlandırır)
+# 6. GZIP / BROTLI SIKIŞTIRMA
 # ---------------------------------------------------------
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/plain
@@ -106,51 +91,44 @@ ServerTokens Prod
   AddOutputFilterByType DEFLATE font/ttf font/otf font/woff font/woff2
 </IfModule>
 
-# Brotli (sunucu destekliyorsa)
 <IfModule mod_brotli.c>
   AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml font/woff font/woff2
 </IfModule>
 
 # ---------------------------------------------------------
-# 7. TARAYICI ÖNBELLEKLEME (Cache) - Tekrar ziyaretleri hızlandırır
+# 7. TARAYICI ÖNBELLEKLEME (Cache)
 # ---------------------------------------------------------
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresDefault                                   "access plus 1 month"
+  ExpiresDefault                                  "access plus 1 month"
 
-  # HTML - 1 saat (içerik değişince hızlı yansısın)
-  ExpiresByType text/html                          "access plus 1 hour"
-
-  # Veri / XML
+  ExpiresByType text/html                         "access plus 1 hour"
   ExpiresByType text/xml application/xml application/json "access plus 0 seconds"
 
-  # CSS / JS (hash'lenmiş dosyalar = 1 yıl)
-  ExpiresByType text/css                           "access plus 1 year"
-  ExpiresByType text/javascript                    "access plus 1 year"
-  ExpiresByType application/javascript             "access plus 1 year"
-  ExpiresByType application/x-javascript           "access plus 1 year"
+  ExpiresByType text/css                          "access plus 1 year"
+  ExpiresByType text/javascript                   "access plus 1 year"
+  ExpiresByType application/javascript            "access plus 1 year"
+  ExpiresByType application/x-javascript          "access plus 1 year"
 
-  # Resimler
-  ExpiresByType image/jpeg                         "access plus 1 year"
-  ExpiresByType image/jpg                          "access plus 1 year"
-  ExpiresByType image/png                          "access plus 1 year"
-  ExpiresByType image/gif                          "access plus 1 year"
-  ExpiresByType image/webp                         "access plus 1 year"
-  ExpiresByType image/avif                         "access plus 1 year"
-  ExpiresByType image/bmp                          "access plus 1 year"
-  ExpiresByType image/x-icon                       "access plus 1 year"
-  ExpiresByType image/svg+xml                      "access plus 1 year"
+  ExpiresByType image/jpeg                        "access plus 1 year"
+  ExpiresByType image/jpg                         "access plus 1 year"
+  ExpiresByType image/png                         "access plus 1 year"
+  ExpiresByType image/gif                         "access plus 1 year"
+  ExpiresByType image/webp                        "access plus 1 year"
+  ExpiresByType image/avif                        "access plus 1 year"
+  ExpiresByType image/bmp                         "access plus 1 year"
+  ExpiresByType image/x-icon                      "access plus 1 year"
+  ExpiresByType image/svg+xml                     "access plus 1 year"
 
-  # Fontlar
-  ExpiresByType font/ttf                           "access plus 1 year"
-  ExpiresByType font/otf                           "access plus 1 year"
-  ExpiresByType font/woff                          "access plus 1 year"
-  ExpiresByType font/woff2                         "access plus 1 year"
-  ExpiresByType application/vnd.ms-fontobject      "access plus 1 year"
+  ExpiresByType font/ttf                          "access plus 1 year"
+  ExpiresByType font/otf                          "access plus 1 year"
+  ExpiresByType font/woff                         "access plus 1 year"
+  ExpiresByType font/woff2                        "access plus 1 year"
+  ExpiresByType application/vnd.ms-fontobject     "access plus 1 year"
 </IfModule>
 
 # ---------------------------------------------------------
-# 8. CACHE CONTROL (expires modülü çalışmazsa yedek)
+# 8. CACHE CONTROL
 # ---------------------------------------------------------
 <IfModule mod_headers.c>
   <FilesMatch "\.(html)$">
@@ -168,7 +146,7 @@ ServerTokens Prod
 </IfModule>
 
 # ---------------------------------------------------------
-# 9. PHP AYARLARI (İletişim formu / uploadlar için)
+# 9. PHP AYARLARI
 # ---------------------------------------------------------
 <IfModule mod_php.c>
   php_value upload_max_filesize   16M
@@ -181,16 +159,3 @@ ServerTokens Prod
   php_flag  display_errors        Off
   php_flag  log_errors            On
 </IfModule>
-
-# Alternatif PHP ayarları (PHP-FPM / cPanel için yorum satırını aç)
-# php_value upload_max_filesize 16M
-# php_value post_max_size 20M
-# php_value memory_limit 256M
-# php_value max_execution_time 120
-# php_value date.timezone "Europe/Amsterdam"
-
-# ---------------------------------------------------------
-# 10. ÖZEL HATA SAYFALARI (İhtiyacınıza göre HTML oluşturup aktif edin)
-# ---------------------------------------------------------
-# ErrorDocument 404 /404.html
-# ErrorDocument 500 /500.html

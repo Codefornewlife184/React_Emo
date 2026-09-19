@@ -1,11 +1,13 @@
 import { useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { FaXmark, FaChevronLeft, FaChevronRight } from 'react-icons/fa6'
 
-export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
+export default function Lightbox({ images = [], startIndex = 0, isOpen, onClose }) {
   const getIndex = useCallback((idx) => {
+    if (!images || images.length === 0) return 0
     const n = images.length
     return ((idx % n) + n) % n
-  }, [images.length])
+  }, [images])
 
   const current = images[getIndex(startIndex)]
 
@@ -39,18 +41,19 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
 
   if (!isOpen || !current) return null
 
-  return (
+  // createPortal ile doğrudan document.body altına aktarılıyor
+  return createPortal(
     <div
       style={{
         position: 'fixed',
         inset: '0',
-        zIndex: 9999,
-        backgroundColor: 'rgba(0,0,0,0.88)',
+        zIndex: 999999,
+        backgroundColor: 'rgba(0,0,0,0.92)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
-        backdropFilter: 'blur(2px)',
+        backdropFilter: 'blur(4px)',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) close()
@@ -60,8 +63,8 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
         aria-label="Kapat"
         onClick={close}
         style={{
-          position: 'absolute',
-          top: '18px',
+          position: 'fixed',
+          top: '20px',
           right: '24px',
           width: '46px',
           height: '46px',
@@ -75,7 +78,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
           cursor: 'pointer',
           boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
           transition: 'transform .2s ease',
-          zIndex: 2,
+          zIndex: 1000000,
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -89,7 +92,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
             aria-label="Önceki"
             onClick={prev}
             style={{
-              position: 'absolute',
+              position: 'fixed',
               left: '24px',
               top: '50%',
               transform: 'translateY(-50%)',
@@ -105,7 +108,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
               cursor: 'pointer',
               boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
               transition: 'all .2s ease',
-              zIndex: 2,
+              zIndex: 1000000,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#25acbf'
@@ -122,7 +125,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
             aria-label="Sonraki"
             onClick={next}
             style={{
-              position: 'absolute',
+              position: 'fixed',
               right: '24px',
               top: '50%',
               transform: 'translateY(-50%)',
@@ -138,7 +141,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
               cursor: 'pointer',
               boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
               transition: 'all .2s ease',
-              zIndex: 2,
+              zIndex: 1000000,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#25acbf'
@@ -194,6 +197,7 @@ export default function Lightbox({ images, startIndex = 0, isOpen, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -18,6 +18,7 @@ import BakimBoyama from './pages/BakimBoyama.jsx'
 import AhsapTamiri from './pages/AhsapTamiri.jsx'
 import LateksBoyama from './pages/LateksBoyama.jsx'
 import DuvarKagidi from './pages/DuvarKagidi.jsx'
+import Career from './pages/Career.jsx'
 import { LanguageProvider } from './i18n/LanguageContext.jsx'
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
     <LanguageProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
+          <Route path="career" element={<Career />} />
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="service" element={<Service />} />

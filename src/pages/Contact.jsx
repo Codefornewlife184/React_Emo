@@ -1,6 +1,7 @@
 import useWowReveal from '../hooks/useWowReveal.js'
 import PageHeader from '../components/PageHeader.jsx'
 import ContactSection from '../sections/ContactSection.jsx'
+import CareerSection from '../sections/CareerSection.jsx'
 
 export default function Contact() {
   const ref = useWowReveal()
@@ -18,6 +19,7 @@ export default function Contact() {
           title="Google Map"
         ></iframe>
       </div>
+      <CareerSection />
     </div>
   )
 }
